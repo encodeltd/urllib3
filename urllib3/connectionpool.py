@@ -658,8 +658,9 @@ class HTTPSConnectionPool(HTTPConnectionPool):
     :class:`.VerifiedHTTPSConnection` is used, which *can* verify certificates,
     instead of :class:`.HTTPSConnection`.
 
-    :class:`.VerifiedHTTPSConnection` uses one of ``assert_fingerprint``,
-    ``assert_hostname`` and ``host`` in this order to verify connections.
+    :class:`.VerifiedHTTPSConnection` uses one of ``assert_pubkey_digests``, 
+    ``assert_fingerprint``, ``assert_hostname`` and ``host`` in this order 
+    to verify connections.
     If ``assert_hostname`` is False, no verification is done.
 
     The ``key_file``, ``cert_file``, ``cert_reqs``, ``ca_certs`` and
@@ -678,6 +679,7 @@ class HTTPSConnectionPool(HTTPConnectionPool):
                  key_file=None, cert_file=None, cert_reqs=None,
                  ca_certs=None, ssl_version=None,
                  assert_hostname=None, assert_fingerprint=None,
+                 assert_pubkey_digests=None,
                  **conn_kw):
 
         HTTPConnectionPool.__init__(self, host, port, strict, timeout, maxsize,
@@ -690,6 +692,7 @@ class HTTPSConnectionPool(HTTPConnectionPool):
         self.ssl_version = ssl_version
         self.assert_hostname = assert_hostname
         self.assert_fingerprint = assert_fingerprint
+        self.assert_pubkey_digests = assert_pubkey_digests
 
     def _prepare_conn(self, conn):
         """
@@ -703,7 +706,8 @@ class HTTPSConnectionPool(HTTPConnectionPool):
                           cert_reqs=self.cert_reqs,
                           ca_certs=self.ca_certs,
                           assert_hostname=self.assert_hostname,
-                          assert_fingerprint=self.assert_fingerprint)
+                          assert_fingerprint=self.assert_fingerprint,
+                          assert_pubkey_digests=self.assert_pubkey_digests)
             conn.ssl_version = self.ssl_version
 
         return conn

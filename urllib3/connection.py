@@ -47,6 +47,7 @@ from .util.ssl_ import (
     resolve_ssl_version,
     ssl_wrap_socket,
     assert_fingerprint,
+    assert_pubkey_digests,
 )
 
 
@@ -187,10 +188,12 @@ class VerifiedHTTPSConnection(HTTPSConnection):
     ca_certs = None
     ssl_version = None
     assert_fingerprint = None
+    assert_pubkey_digests = None
 
     def set_cert(self, key_file=None, cert_file=None,
                  cert_reqs=None, ca_certs=None,
-                 assert_hostname=None, assert_fingerprint=None):
+                 assert_hostname=None, assert_fingerprint=None,
+                 assert_pubkey_digests=None):
 
         self.key_file = key_file
         self.cert_file = cert_file
@@ -198,6 +201,7 @@ class VerifiedHTTPSConnection(HTTPSConnection):
         self.ca_certs = ca_certs
         self.assert_hostname = assert_hostname
         self.assert_fingerprint = assert_fingerprint
+        self.assert_pubkey_digests = assert_pubkey_digests
 
     def connect(self):
         # Add certificate verification
@@ -237,7 +241,10 @@ class VerifiedHTTPSConnection(HTTPSConnection):
                                     server_hostname=hostname,
                                     ssl_version=resolved_ssl_version)
 
-        if self.assert_fingerprint:
+        if self.assert_pubkey_digests:
+            assert_pubkey_digests(self.sock.getpeercertchain(),
+                                  self.assert_pubkey_digests)
+        elif self.assert_fingerprint:
             assert_fingerprint(self.sock.getpeercert(binary_form=True),
                                self.assert_fingerprint)
         elif resolved_cert_reqs != ssl.CERT_NONE \

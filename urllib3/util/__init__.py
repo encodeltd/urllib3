@@ -6,6 +6,7 @@ from .ssl_ import (
     SSLContext,
     HAS_SNI,
     assert_fingerprint,
+    assert_pubkey_digests,
     resolve_cert_reqs,
     resolve_ssl_version,
     ssl_wrap_socket,

@@ -230,6 +230,9 @@ class WrappedSocket(object):
         else:
             self._makefile_refs -= 1
 
+    def getpeercertchain(self):
+        return self.connection.get_peer_cert_chain()
+
     def getpeercert(self, binary_form=False):
         x509 = self.connection.get_peer_certificate()
 

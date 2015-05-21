@@ -135,6 +135,49 @@ def assert_fingerprint(cert, fingerprint):
                        .format(fingerprint, hexlify(cert_digest)))
 
 
+def assert_pubkey_digests(peer_cert_chain, pubkey_digests):
+    """
+    Checks if public key digests of the given certificate chain 
+    match any of the supplied public key digests.
+
+    :param peer_cert_chain:
+        Peer certificate chain.
+    :param pubkey_digests:
+        Tuple of base64 encoded public key SHA1 or SHA256 digests.
+    """
+    import M2Crypto
+    from OpenSSL.crypto import dump_certificate
+    from OpenSSL.crypto import FILETYPE_ASN1
+    from base64 import b64decode
+    from base64 import b64encode
+
+    match = []
+    for cert in peer_cert_chain:
+        cert_binary = dump_certificate(
+                FILETYPE_ASN1,
+                cert)
+        x509 = M2Crypto.X509.load_cert_string(cert_binary, M2Crypto.X509.FORMAT_DER)
+        mem = M2Crypto.BIO.MemoryBuffer()
+        x509.get_pubkey().get_rsa().save_pub_key_bio(mem)
+        pubkey = mem.getvalue()
+        pubkey_base64 = ''.join(pubkey.split("\n")[1:-2])
+        pubkey_raw = b64decode(pubkey_base64)
+        pubkey_digest_sha1 = sha1(pubkey_raw).digest()
+        pubkey_digest_sha1_base64 = b64encode(pubkey_digest_sha1)
+        pubkey_digest_sha256 = sha256(pubkey_raw).digest()
+        pubkey_digest_sha256_base64 = b64encode(pubkey_digest_sha256)
+        if pubkey_digest_sha256_base64 in pubkey_digests:
+            break
+        if pubkey_digest_sha1_base64 in pubkey_digests:
+            break
+        match.append(pubkey_digest_sha256_base64)
+        match.append(pubkey_digest_sha1_base64)
+    else:
+        match = "({:s})".format(", \n".join(x for x in match))
+        expected = "({:s})".format(", \n".join(b64encode(x) for x in pubkey_digests))
+        raise ValueError("Public key digests (sha1, or sha256) do not match any of the expected pins!\n\nReceived:\n{:s}\n\nExpected:\n{:s}\n".format(match, expected))
+
+
 def resolve_cert_reqs(candidate):
     """
     Resolves the argument to a numeric constant, which can be passed to
