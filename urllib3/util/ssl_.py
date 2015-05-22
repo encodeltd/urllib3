@@ -1,5 +1,14 @@
 from binascii import hexlify, unhexlify
 from hashlib import md5, sha1, sha256
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.serialization import Encoding
+from cryptography.hazmat.primitives.serialization import PublicFormat
+from OpenSSL.crypto import dump_certificate
+from OpenSSL.crypto import FILETYPE_ASN1
+from base64 import b64decode
+from base64 import b64encode
+
 
 from ..exceptions import SSLError, InsecurePlatformWarning
 
@@ -145,29 +154,22 @@ def assert_pubkey_digests(peer_cert_chain, pubkey_digests):
     :param pubkey_digests:
         Tuple of base64 encoded public key SHA1 or SHA256 digests.
     """
-    import M2Crypto
-    from OpenSSL.crypto import dump_certificate
-    from OpenSSL.crypto import FILETYPE_ASN1
-    from base64 import b64decode
-    from base64 import b64encode
-
     match = []
     for cert in peer_cert_chain:
         cert_binary = dump_certificate(
                 FILETYPE_ASN1,
                 cert)
-        x509 = M2Crypto.X509.load_cert_string(cert_binary, M2Crypto.X509.FORMAT_DER)
-        mem = M2Crypto.BIO.MemoryBuffer()
-        x509.get_pubkey().get_rsa().save_pub_key_bio(mem)
-        pubkey = mem.getvalue()
+        certificate = x509.load_der_x509_certificate(cert_binary, default_backend())
+        key = certificate.public_key()
+        pubkey = key.public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
         pubkey_base64 = ''.join(pubkey.split("\n")[1:-2])
         pubkey_raw = b64decode(pubkey_base64)
-        pubkey_digest_sha1 = sha1(pubkey_raw).digest()
-        pubkey_digest_sha1_base64 = b64encode(pubkey_digest_sha1)
         pubkey_digest_sha256 = sha256(pubkey_raw).digest()
         pubkey_digest_sha256_base64 = b64encode(pubkey_digest_sha256)
         if pubkey_digest_sha256_base64 in pubkey_digests:
             break
+        pubkey_digest_sha1 = sha1(pubkey_raw).digest()
+        pubkey_digest_sha1_base64 = b64encode(pubkey_digest_sha1)
         if pubkey_digest_sha1_base64 in pubkey_digests:
             break
         match.append(pubkey_digest_sha256_base64)
