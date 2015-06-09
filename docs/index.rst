@@ -98,6 +98,27 @@ like buffering:
     >>> secondpart = b.read()
 
 
+Upgrading & Versioning
+----------------------
+
+urllib3 uses a compatibility-based versioning scheme (let's call it
+*compatver*). For the user, they indicate the required decision for upgrading.
+
+Given a version ``A.B.C``:
+
+``C.`` Strictly backwards-compatible, usually a bug-fix. **Always upgrade.**
+
+``B.`` Possibly partially incompatible, usually a new feature or a minor API
+improvement. **Read the changelog and upgrade when ready.**
+
+``A.`` Major rewrite and possibly breaks everything. Not really an upgrade,
+basically a new library under the same namespace, decide if you want to switch.
+
+For example, when going from urllib3 v1.2.3 to v1.2.4, you should always
+upgrade without hesitation. When going from v1.2 to v1.3, you should read the
+changes to make sure they're not going to affect you.
+
+
 Components
 ==========
 
@@ -352,7 +373,8 @@ benefits from this library.
 
     <a href="https://donorbox.org/personal-sponsor-urllib3" style="background-color:#1275ff;color:#fff;text-decoration:none;font-family:Verdana,sans-serif;display:inline-block;font-size:14px;padding:7px 16px;border-radius:5px;margin-right:2em;vertical-align:top;border:1px solid rgba(160,160,160,0.5);background-image:linear-gradient(#7dc5ee,#008cdd 85%,#30a2e4);box-shadow:inset 0 1px 0 rgba(255,255,255,0.25);">Sponsor with Credit Card</a>
 
-    <a class="coinbase-button" data-code="137087702cf2e77ce400d53867b164e6" href="https://coinbase.com/checkouts/137087702cf2e77ce400d53867b164e6">Sponsor with Bitcoin</a><script src="https://coinbase.com/assets/button.js" type="text/javascript"></script>
+    <a class="coinbase-button" data-code="137087702cf2e77ce400d53867b164e6" href="https://coinbase.com/checkouts/137087702cf2e77ce400d53867b164e6">Sponsor with Bitcoin</a>
+    <script src="https://www.coinbase.com/assets/button.js" type="text/javascript"></script>
 
 * **Recurring**: You're welcome to `support the maintainer on Gittip
   <https://www.gittip.com/shazow/>`_.
