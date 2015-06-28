@@ -195,6 +195,9 @@ class VerifiedHTTPSConnection(HTTPSConnection):
                  assert_hostname=None, assert_fingerprint=None,
                  assert_pubkey_digests=None):
 
+        if ca_certs and cert_reqs is None:
+            cert_reqs = 'CERT_REQUIRED'
+
         self.key_file = key_file
         self.cert_file = cert_file
         self.cert_reqs = cert_reqs

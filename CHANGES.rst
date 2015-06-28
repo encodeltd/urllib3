@@ -4,6 +4,9 @@ Changes
 dev (master)
 ++++++++++++
 
+* When ``ca_certs`` is given, ``cert_reqs`` defaults to
+  'CERT_REQUIRED'. (Issue #650)
+
 * Fix performance regression when using PyOpenSSL. (Issue #626)
 
 * Dev: Added test suite for AppEngine. (Issue #631)
@@ -14,6 +17,12 @@ dev (master)
 
 * Fix pools not getting replenished when an error occurs during a
   request using ``release_conn=False``. (Issue #644)
+  
+* Fix pool-default headers not applying for url-encoded requests
+  like GET. (Issue #657)
+
+* log.warning in Python 3 when headers are skipped due to parsing
+  errors. (Issue #642)
 
 * ... [Short description of non-trivial change.] (Issue #)
 

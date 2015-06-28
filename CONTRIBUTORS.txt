@@ -153,6 +153,12 @@ In chronological order:
 
 * Jon Wayne Parrott <jonwayne@google.com>
   * App Engine environment tests.
+  
+* John Krauss <https://github.com/talos>
+  * Clues to debugging problems with `cryptography` dependency in docs
+
+* Disassem <https://github.com/Disassem>
+  * Fix pool-default headers not applying for url-encoded requests like GET.
 
 * [Your name or handle] <[email or website]>
   * [Brief summary of your changes]
