@@ -4,12 +4,31 @@ Changes
 dev (master)
 ++++++++++++
 
-* When ``ca_certs`` is given, ``cert_reqs`` defaults to
-  'CERT_REQUIRED'. (Issue #650)
+* Rely on ``six`` for importing ``httplib`` to work around
+  conflicts with other Python 3 shims. (Issue #688)
 
-* Fix performance regression when using PyOpenSSL. (Issue #626)
+* ... [Short description of non-trivial change.] (Issue #)
+
+
+1.11 (2015-07-21)
++++++++++++++++++
+
+* When ``ca_certs`` is given, ``cert_reqs`` defaults to
+  ``'CERT_REQUIRED'``. (Issue #650)
+
+* ``pip install urllib3[secure]`` will install Certifi and
+  PyOpenSSL as dependencies. (Issue #678)
+  
+* Made ``HTTPHeaderDict`` usable as a ``headers`` input value
+  (Issues #632, #679)
+  
+* Added `urllib3.contrib.appengine <https://urllib3.readthedocs.org/en/latest/contrib.html#google-app-engine>`_
+  which has an ``AppEngineManager`` for using ``URLFetch`` in a
+  Google AppEngine environment. (Issue #664)
 
 * Dev: Added test suite for AppEngine. (Issue #631)
+
+* Fix performance regression when using PyOpenSSL. (Issue #626)
 
 * Passing incorrect scheme (e.g. ``foo://``) will raise
   ``ValueError`` instead of ``AssertionError`` (backwards
@@ -23,9 +42,18 @@ dev (master)
 
 * log.warning in Python 3 when headers are skipped due to parsing
   errors. (Issue #642)
+  
+* Close and discard connections if an error occurs during read.
+  (Issue #660)
+  
+* Fix host parsing for IPv6 proxies. (Issue #668)
 
-* ... [Short description of non-trivial change.] (Issue #)
-
+* Separate warning type SubjectAltNameWarning, now issued once
+  per host. (Issue #671)
+  
+* Fix ``httplib.IncompleteRead`` not getting converted to
+  ``ProtocolError`` when using ``HTTPResponse.stream()``
+  (Issue #674)
 
 1.10.4 (2015-05-03)
 +++++++++++++++++++

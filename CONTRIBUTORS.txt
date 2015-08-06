@@ -1,4 +1,4 @@
-# Contributions to the urllib3 project
+﻿# Contributions to the urllib3 project
 
 ## Creator & Maintainer
 
@@ -159,6 +159,15 @@ In chronological order:
 
 * Disassem <https://github.com/Disassem>
   * Fix pool-default headers not applying for url-encoded requests like GET.
+
+* James Atherfold <jlatherfold@hotmail.com>
+  * Bugfixes relating to cleanup of connections during errors.
+
+* Christian Pedersen <https://github.com/chripede>
+  * IPv6 HTTPS proxy bugfix
+
+* Jordan Moldow <https://github.com/jmoldow>
+  * Fix low-level exceptions leaking from ``HTTPResponse.stream()``.
 
 * [Your name or handle] <[email or website]>
   * [Brief summary of your changes]
