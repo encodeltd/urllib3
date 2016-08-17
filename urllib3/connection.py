@@ -321,13 +321,16 @@ class VerifiedHTTPSConnection(HTTPSConnection):
             ssl_context=context)
 
         if self.assert_pubkey_digests:
+            log.info('Verifying connection using provided PubKey digests: %s', self.assert_pubkey_digests)
             assert_pubkey_digests(self.sock.getpeercertchain(),
                                   self.assert_pubkey_digests)
         elif self.assert_fingerprint:
+            log.info('Verifying connection using provided fingerprint: %s', self.assert_fingerprint)
             assert_fingerprint(self.sock.getpeercert(binary_form=True),
                                self.assert_fingerprint)
         elif context.verify_mode != ssl.CERT_NONE \
                 and self.assert_hostname is not False:
+            log.info('Verifying connection using matching hostname with cert\'s subjectAltName')
             cert = self.sock.getpeercert()
             if not cert.get('subjectAltName', ()):
                 warnings.warn((
@@ -342,7 +345,7 @@ class VerifiedHTTPSConnection(HTTPSConnection):
         self.is_verified = (
             context.verify_mode == ssl.CERT_REQUIRED or
             self.assert_fingerprint is not None or
-            self.assert_pubkey_digests is not None)
+            self.assert_pubkey_digests is not None
         )
 
 
