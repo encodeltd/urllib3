@@ -1,3 +1,44 @@
+"""
+This module provides a pool manager that uses Google App Engine's
+`URLFetch Service <https://cloud.google.com/appengine/docs/python/urlfetch>`_.
+
+Example usage::
+
+    from urllib3 import PoolManager
+    from urllib3.contrib.appengine import AppEngineManager, is_appengine_sandbox
+
+    if is_appengine_sandbox():
+        # AppEngineManager uses AppEngine's URLFetch API behind the scenes
+        http = AppEngineManager()
+    else:
+        # PoolManager uses a socket-level API behind the scenes
+        http = PoolManager()
+
+    r = http.request('GET', 'https://google.com/')
+
+There are `limitations <https://cloud.google.com/appengine/docs/python/\
+urlfetch/#Python_Quotas_and_limits>`_ to the URLFetch service and it may not be
+the best choice for your application. There are three options for using
+urllib3 on Google App Engine:
+
+1. You can use :class:`AppEngineManager` with URLFetch. URLFetch is
+   cost-effective in many circumstances as long as your usage is within the
+   limitations.
+2. You can use a normal :class:`~urllib3.PoolManager` by enabling sockets.
+   Sockets also have `limitations and restrictions
+   <https://cloud.google.com/appengine/docs/python/sockets/\
+   #limitations-and-restrictions>`_ and have a lower free quota than URLFetch.
+   To use sockets, be sure to specify the following in your ``app.yaml``::
+
+        env_variables:
+            GAE_USE_SOCKETS_HTTPLIB : 'true'
+
+3. If you are using `App Engine Flexible
+<https://cloud.google.com/appengine/docs/flexible/>`_, you can use the standard
+:class:`PoolManager` without any configuration or special environment variables.
+"""
+
+from __future__ import absolute_import
 import logging
 import os
 import warnings
@@ -40,13 +81,12 @@ class AppEngineManager(RequestMethods):
 
     This manager uses the URLFetch service directly instead of using the
     emulated httplib, and is subject to URLFetch limitations as described in
-    the App Engine documentation here:
+    the App Engine documentation `here
+    <https://cloud.google.com/appengine/docs/python/urlfetch>`_.
 
-        https://cloud.google.com/appengine/docs/python/urlfetch
-
-    Notably it will raise an AppEnginePlatformError if:
+    Notably it will raise an :class:`AppEnginePlatformError` if:
         * URLFetch is not available.
-        * If you attempt to use this on GAEv2 (Managed VMs), as full socket
+        * If you attempt to use this on App Engine Flexible, as full socket
           support is available.
         * If a request size is more than 10 megabytes.
         * If a response size is more than 32 megabtyes.
@@ -60,7 +100,7 @@ class AppEngineManager(RequestMethods):
             raise AppEnginePlatformError(
                 "URLFetch is not available in this environment.")
 
-        if is_prod_appengine_v2():
+        if is_prod_appengine_mvms():
             raise AppEnginePlatformError(
                 "Use normal urllib3.PoolManager instead of AppEngineManager"
                 "on Managed VMs, as using URLFetch is not necessary in "
@@ -69,7 +109,7 @@ class AppEngineManager(RequestMethods):
         warnings.warn(
             "urllib3 is using URLFetch on Google App Engine sandbox instead "
             "of sockets. To use sockets directly instead of URLFetch see "
-            "https://urllib3.readthedocs.org/en/latest/contrib.html.",
+            "https://urllib3.readthedocs.io/en/latest/contrib.html.",
             AppEnginePlatformWarning)
 
         RequestMethods.__init__(self, headers)
@@ -108,14 +148,14 @@ class AppEngineManager(RequestMethods):
             raise TimeoutError(self, e)
 
         except urlfetch.InvalidURLError as e:
-            if 'too large' in e.message:
+            if 'too large' in str(e):
                 raise AppEnginePlatformError(
                     "URLFetch request too large, URLFetch only "
                     "supports requests up to 10mb in size.", e)
             raise ProtocolError(e)
 
         except urlfetch.DownloadError as e:
-            if 'Too many redirects' in e.message:
+            if 'Too many redirects' in str(e):
                 raise MaxRetryError(self, url, reason=e)
             raise ProtocolError(e)
 
@@ -132,7 +172,7 @@ class AppEngineManager(RequestMethods):
                 "URLFetch does not support method: %s" % method, e)
 
         http_response = self._urlfetch_response_to_http_response(
-            response, **response_kw)
+            response, retries=retries, **response_kw)
 
         # Check for redirect response
         if (http_response.get_redirect_location() and
@@ -143,7 +183,7 @@ class AppEngineManager(RequestMethods):
         if retries.is_forced_retry(method, status_code=http_response.status):
             retries = retries.increment(
                 method, url, response=http_response, _pool=self)
-            log.info("Forced retry: %s" % url)
+            log.info("Forced retry: %s", url)
             retries.sleep()
             return self.urlopen(
                 method, url,
@@ -155,13 +195,21 @@ class AppEngineManager(RequestMethods):
 
     def _urlfetch_response_to_http_response(self, urlfetch_resp, **response_kw):
 
-        if is_prod_appengine_v1():
+        if is_prod_appengine():
             # Production GAE handles deflate encoding automatically, but does
             # not remove the encoding header.
             content_encoding = urlfetch_resp.headers.get('content-encoding')
 
             if content_encoding == 'deflate':
                 del urlfetch_resp.headers['content-encoding']
+
+        transfer_encoding = urlfetch_resp.headers.get('transfer-encoding')
+        # We have a full response's content,
+        # so let's make sure we don't report ourselves as chunked data.
+        if transfer_encoding == 'chunked':
+            encodings = transfer_encoding.split(",")
+            encodings.remove('chunked')
+            urlfetch_resp.headers['transfer-encoding'] = ','.join(encodings)
 
         return HTTPResponse(
             # In order for decoding to work, we must present the content as
@@ -174,12 +222,13 @@ class AppEngineManager(RequestMethods):
 
     def _get_absolute_timeout(self, timeout):
         if timeout is Timeout.DEFAULT_TIMEOUT:
-            return 5  # 5s is the default timeout for URLFetch.
+            return None  # Defer to URLFetch's default.
         if isinstance(timeout, Timeout):
-            if not timeout.read is timeout.connect:
+            if timeout._read is not None or timeout._connect is not None:
                 warnings.warn(
                     "URLFetch does not support granular timeout settings, "
-                    "reverting to total timeout.", AppEnginePlatformWarning)
+                    "reverting to total or default URLFetch timeout.",
+                    AppEnginePlatformWarning)
             return timeout.total
         return timeout
 
@@ -199,12 +248,12 @@ class AppEngineManager(RequestMethods):
 
 def is_appengine():
     return (is_local_appengine() or
-            is_prod_appengine_v1() or
-            is_prod_appengine_v2())
+            is_prod_appengine() or
+            is_prod_appengine_mvms())
 
 
 def is_appengine_sandbox():
-    return is_appengine() and not is_prod_appengine_v2()
+    return is_appengine() and not is_prod_appengine_mvms()
 
 
 def is_local_appengine():
@@ -212,11 +261,11 @@ def is_local_appengine():
             'Development/' in os.environ['SERVER_SOFTWARE'])
 
 
-def is_prod_appengine_v1():
+def is_prod_appengine():
     return ('APPENGINE_RUNTIME' in os.environ and
             'Google App Engine/' in os.environ['SERVER_SOFTWARE'] and
-            not is_prod_appengine_v2())
+            not is_prod_appengine_mvms())
 
 
-def is_prod_appengine_v2():
+def is_prod_appengine_mvms():
     return os.environ.get('GAE_VM', False) == 'true'

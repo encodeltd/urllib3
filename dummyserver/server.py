@@ -34,9 +34,16 @@ NO_SAN_CERTS = {
     'certfile': os.path.join(CERTS_PATH, 'server.no_san.crt'),
     'keyfile': DEFAULT_CERTS['keyfile']
 }
+IPV6_ADDR_CERTS = {
+    'certfile': os.path.join(CERTS_PATH, 'server.ipv6addr.crt'),
+    'keyfile': os.path.join(CERTS_PATH, 'server.ipv6addr.key'),
+}
 DEFAULT_CA = os.path.join(CERTS_PATH, 'cacert.pem')
 DEFAULT_CA_BAD = os.path.join(CERTS_PATH, 'client_bad.pem')
 NO_SAN_CA = os.path.join(CERTS_PATH, 'cacert.no_san.pem')
+DEFAULT_CA_DIR = os.path.join(CERTS_PATH, 'ca_path_test')
+IPV6_ADDR_CA = os.path.join(CERTS_PATH, 'server.ipv6addr.crt')
+
 
 def _has_ipv6(host):
     """ Returns True if the system can bind an IPv6 address. """
@@ -83,6 +90,8 @@ class SocketServerThread(threading.Thread):
     :param ready_event: Event which gets set when the socket handler is
         ready to receive requests.
     """
+    USE_IPV6 = HAS_IPV6_AND_DNS
+
     def __init__(self, socket_handler, host='localhost', port=8081,
                  ready_event=None):
         threading.Thread.__init__(self)
@@ -93,7 +102,7 @@ class SocketServerThread(threading.Thread):
         self.ready_event = ready_event
 
     def _start_server(self):
-        if HAS_IPV6_AND_DNS:
+        if self.USE_IPV6:
             sock = socket.socket(socket.AF_INET6)
         else:
             warnings.warn("No IPv6 support. Falling back to IPv4.",

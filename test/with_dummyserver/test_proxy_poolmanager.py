@@ -124,7 +124,7 @@ class TestHTTPProxyManager(HTTPDummyProxyTestCase):
         try:
             http.request('GET', '%s/redirect' % self.http_url,
                          fields={'target': cross_host_location},
-                         timeout=0.1, retries=0)
+                         timeout=1, retries=0)
             self.fail("We don't want to follow redirects here.")
 
         except MaxRetryError:
@@ -132,7 +132,7 @@ class TestHTTPProxyManager(HTTPDummyProxyTestCase):
 
         r = http.request('GET', '%s/redirect' % self.http_url,
                          fields={'target': '%s/echo?a=b' % self.http_url_alt},
-                         timeout=0.1, retries=1)
+                         timeout=1, retries=1)
         self.assertNotEqual(r._pool.host, self.http_host_alt)
 
     def test_cross_protocol_redirect(self):
@@ -142,7 +142,7 @@ class TestHTTPProxyManager(HTTPDummyProxyTestCase):
         try:
             http.request('GET', '%s/redirect' % self.http_url,
                          fields={'target': cross_protocol_location},
-                         timeout=0.1, retries=0)
+                         timeout=1, retries=0)
             self.fail("We don't want to follow redirects here.")
 
         except MaxRetryError:
@@ -150,7 +150,7 @@ class TestHTTPProxyManager(HTTPDummyProxyTestCase):
 
         r = http.request('GET', '%s/redirect' % self.http_url,
                          fields={'target': '%s/echo?a=b' % self.https_url},
-                         timeout=0.1, retries=1)
+                         timeout=1, retries=1)
         self.assertEqual(r._pool.host, self.https_host)
 
     def test_headers(self):
@@ -287,7 +287,7 @@ class TestHTTPProxyManager(HTTPDummyProxyTestCase):
             https.request('GET', self.http_url, timeout=0.001)
             self.fail("Failed to raise retry error.")
         except MaxRetryError as e:
-            assert isinstance(e.reason, ConnectTimeoutError)
+           self.assertEqual(type(e.reason), ConnectTimeoutError)
 
 
     @timed(0.5)
@@ -298,7 +298,17 @@ class TestHTTPProxyManager(HTTPDummyProxyTestCase):
             https.request('GET', self.http_url)
             self.fail("Failed to raise retry error.")
         except MaxRetryError as e:
-            assert isinstance(e.reason, ConnectTimeoutError)
+            self.assertEqual(type(e.reason), ConnectTimeoutError)
+
+    def test_scheme_host_case_insensitive(self):
+        """Assert that upper-case schemes and hosts are normalized."""
+        http = proxy_from_url(self.proxy_url.upper())
+
+        r = http.request('GET', '%s/' % self.http_url.upper())
+        self.assertEqual(r.status, 200)
+
+        r = http.request('GET', '%s/' % self.https_url.upper())
+        self.assertEqual(r.status, 200)
 
 
 class TestIPv6HTTPProxyManager(IPv6HTTPDummyProxyTestCase):

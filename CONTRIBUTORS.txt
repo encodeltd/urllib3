@@ -1,4 +1,4 @@
-﻿# Contributions to the urllib3 project
+# Contributions to the urllib3 project
 
 ## Creator & Maintainer
 
@@ -153,7 +153,7 @@ In chronological order:
 
 * Jon Wayne Parrott <jonwayne@google.com>
   * App Engine environment tests.
-  
+
 * John Krauss <https://github.com/talos>
   * Clues to debugging problems with `cryptography` dependency in docs
 
@@ -168,7 +168,47 @@ In chronological order:
 
 * Jordan Moldow <https://github.com/jmoldow>
   * Fix low-level exceptions leaking from ``HTTPResponse.stream()``.
+  * Bugfix for ``ConnectionPool.urlopen(release_conn=False)``.
+  * Creation of ``HTTPConnectionPool.ResponseCls``.
+
+* Predrag Gruevski <https://github.com/obi1kenobi>
+  * Made cert digest comparison use a constant-time algorithm.
+
+* Adam Talsma <https://github.com/a-tal>
+  * Bugfix to ca_cert file paths.
+
+* Evan Meagher <https://evanmeagher.net>
+  * Bugfix related to `memoryview` usage in PyOpenSSL adapter
+
+* John Vandenberg <jayvdb@gmail.com>
+  * Python 2.6 fixes; pyflakes and pep8 compliance
+
+* Andy Caldwell <andy.m.caldwell@googlemail.com>
+  * Bugfix related to reusing connections in indeterminate states.
+
+* Ville Skyttä <ville.skytta@iki.fi>
+  * Logging efficiency improvements, spelling fixes, Travis config.
+
+* Shige Takeda <smtakeda@gmail.com>
+  * Started Recipes documentation and added a recipe about handling concatenated gzip data in HTTP response
+
+* Jesse Shapiro <jesse@jesseshapiro.net>
+  * Various character-encoding fixes/tweaks
+  * Disabling IPv6 DNS when IPv6 connections not supported
+
+* David Foster <http://dafoster.net/>
+  * Ensure order of request and response headers are preserved.
+
+* Jeremy Cline <jeremy@jcline.org>
+  * Added connection pool keys by scheme
+
+* Aviv Palivoda <palaviv@gmail.com>
+  * History list to Retry object.
+  * HTTPResponse contains the last Retry object.
+
+* Nate Prewitt <nate.prewitt@gmail.com>
+  * Ensure timeouts are not booleans and greater than zero.
+  * Fixed infinite loop in ``stream`` when amt=None.
 
 * [Your name or handle] <[email or website]>
   * [Brief summary of your changes]
-

@@ -2,12 +2,10 @@ import unittest
 
 from io import BytesIO, BufferedReader
 
-try:
-    import http.client as httplib
-except ImportError:
-    import httplib
 from urllib3.response import HTTPResponse
 from urllib3.exceptions import DecodeError, ResponseNotChunked, ProtocolError
+from urllib3.packages.six.moves import http_client as httplib
+from urllib3.util.retry import Retry
 
 
 from base64 import b64decode
@@ -524,6 +522,14 @@ class TestResponse(unittest.TestCase):
         r = HTTPResponse(headers=headers)
         self.assertEqual(r.headers.get('host'), 'example.com')
         self.assertEqual(r.headers.get('Host'), 'example.com')
+
+    def test_retries(self):
+        fp = BytesIO(b'')
+        resp = HTTPResponse(fp)
+        self.assertEqual(resp.retries, None)
+        retry = Retry()
+        resp = HTTPResponse(fp, retries=retry)
+        self.assertEqual(resp.retries, retry)
 
 
 class MockChunkedEncodingResponse(object):
