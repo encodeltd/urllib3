@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import collections
+import contextlib
 import gzip
 import json
 import logging
@@ -10,6 +11,9 @@ import zlib
 
 from io import BytesIO
 from tornado.web import RequestHandler
+from tornado import httputil
+from datetime import datetime
+from datetime import timedelta
 
 from urllib3.packages.six.moves.http_client import responses
 from urllib3.packages.six.moves.urllib.parse import urlsplit
@@ -102,6 +106,15 @@ class TestingApp(RequestHandler):
         "Render simple message"
         return Response("Dummy server!")
 
+    def certificate(self, request):
+        """Return the requester's certificate."""
+        cert = request.get_ssl_certificate()
+        subject = dict()
+        if cert is not None:
+            subject = dict((k, v) for (k, v) in [y for z in cert['subject']
+                                                 for y in z])
+        return Response(json.dumps(subject))
+
     def source_address(self, request):
         """Return the requester's IP address."""
         return Response(request.remote_ip)
@@ -129,8 +142,8 @@ class TestingApp(RequestHandler):
     def upload(self, request):
         "Confirm that the uploaded file conforms to specification"
         # FIXME: This is a huge broken mess
-        param = request.params.get('upload_param', 'myfile').decode('ascii')
-        filename = request.params.get('upload_filename', '').decode('utf-8')
+        param = request.params.get('upload_param', b'myfile').decode('ascii')
+        filename = request.params.get('upload_filename', b'').decode('utf-8')
         size = int(request.params.get('upload_size', '0'))
         files_ = request.files.get(param)
 
@@ -154,12 +167,19 @@ class TestingApp(RequestHandler):
     def redirect(self, request):
         "Perform a redirect to ``target``"
         target = request.params.get('target', '/')
+        status = request.params.get('status', '303 See Other')
+        if len(status) == 3:
+            status = '%s Redirect' % status.decode('latin-1')
+
         headers = [('Location', target)]
-        return Response(status='303 See Other', headers=headers)
+        return Response(status=status, headers=headers)
+
+    def not_found(self, request):
+        return Response('Not found', status='404 Not Found')
 
     def multi_redirect(self, request):
         "Performs a redirect chain based on ``redirect_codes``"
-        codes = request.params.get('redirect_codes', '200').decode('utf-8')
+        codes = request.params.get('redirect_codes', b'200').decode('utf-8')
         head, tail = codes.split(',', 1) if "," in codes else (codes, None)
         status = "{0} {1}".format(head, responses[int(head)])
         if not tail:
@@ -199,9 +219,8 @@ class TestingApp(RequestHandler):
         if encoding == 'gzip':
             headers = [('Content-Encoding', 'gzip')]
             file_ = BytesIO()
-            zipfile = gzip.GzipFile('', mode='w', fileobj=file_)
-            zipfile.write(data)
-            zipfile.close()
+            with contextlib.closing(gzip.GzipFile('', mode='w', fileobj=file_)) as zipfile:
+                zipfile.write(data)
             data = file_.getvalue()
         elif encoding == 'deflate':
             headers = [('Content-Encoding', 'deflate')]
@@ -215,7 +234,7 @@ class TestingApp(RequestHandler):
         return Response(data, headers=headers)
 
     def headers(self, request):
-        return Response(json.dumps(request.headers))
+        return Response(json.dumps(dict(request.headers)))
 
     def successful_retry(self, request):
         """ Handler which will return an error and then success
@@ -260,6 +279,29 @@ class TestingApp(RequestHandler):
 
         return Response(status=status)
 
+    def retry_after(self, request):
+        if datetime.now() - self.application.last_req < timedelta(seconds=1):
+            status = request.params.get("status", b"429 Too Many Requests")
+            return Response(
+                    status=status.decode('utf-8'),
+                    headers=[('Retry-After', '1')])
+
+        self.application.last_req = datetime.now()
+
+        return Response(status="200 OK")
+
+    def redirect_after(self, request):
+        "Perform a redirect to ``target``"
+        date = request.params.get('date')
+        if date:
+            retry_after = str(httputil.format_timestamp(
+                    datetime.fromtimestamp(float(date))))
+        else:
+            retry_after = '1'
+        target = request.params.get('target', '/')
+        headers = [('Location', target), ('Retry-After', retry_after)]
+        return Response(status='303 See Other', headers=headers)
+
     def shutdown(self, request):
         sys.exit()
 
@@ -300,6 +342,7 @@ def _parse_header(line):
             value = value[1:-1]
         pdict[name] = value
     return key, pdict
+
 
 # TODO: make the following conditional as soon as we know a version
 #       which does not require this fix.

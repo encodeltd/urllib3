@@ -162,7 +162,8 @@ For uploading files using ``multipart/form-data`` encoding you can use the same
 approach as :ref:`form_data` and specify the file field as a tuple of
 ``(file_name, file_data)``::
 
-    >>> file_data = open('example.txt').read()
+    >>> with open('example.txt') as fp:
+    ...     file_data = fp.read()
     >>> r = http.request(
     ...     'POST',
     ...     'http://httpbin.org/post',
@@ -186,7 +187,8 @@ to specify the file's MIME type explicitly::
 For sending raw binary data simply specify the ``body`` argument. It's also
 recommended to set the ``Content-Type`` header::
 
-    >>> binary_data = open('example.jpg', 'rb').read()
+    >>> with open('example.jpg', 'rb') as fp:
+    ...     binary_data = fp.read()
     >>> r = http.request(
     ...     'POST',
     ...     'http://httpbin.org/post',
@@ -203,8 +205,8 @@ Certificate verification
 It is highly recommended to always use SSL certificate verification.
 **By default, urllib3 does not verify HTTPS requests**.
 
-In order to enable verification you will need root certificate. The easiest
-and most reliable method is to use the `certifi <https://certifi.io/en/latest>`_ package which provides Mozilla's root certificate bundle::
+In order to enable verification you will need a set of root certificates. The easiest
+and most reliable method is to use the `certifi <https://certifi.io/>`_ package which provides Mozilla's root certificate bundle::
 
     pip install certifi
 
@@ -369,7 +371,7 @@ For example, to do a total of 3 retries, but limit to only 2 redirects::
     >>> http.request(
     ...     'GET',
     ...     'http://httpbin.org/redirect/3',
-    ...     retries=urllib3.Retries(3, redirect=2))
+    ...     retries=urllib3.Retry(3, redirect=2))
     MaxRetryError
 
 You can also disable exceptions for too many redirects and just return the
@@ -378,7 +380,7 @@ You can also disable exceptions for too many redirects and just return the
     >>> r = http.request(
     ...     'GET',
     ...     'http://httpbin.org/redirect/3',
-    ...     retries=urllib3.Retries(
+    ...     retries=urllib3.Retry(
     ...         redirect=2, raise_on_redirect=False))
     >>> r.status
     302
