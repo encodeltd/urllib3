@@ -2,7 +2,6 @@ from __future__ import absolute_import
 import datetime
 import logging
 import os
-import sys
 import socket
 from socket import error as SocketError, timeout as SocketTimeout
 import warnings
@@ -79,9 +78,6 @@ class HTTPConnection(_HTTPConnection, object):
 
       - ``strict``: See the documentation on :class:`urllib3.connectionpool.HTTPConnectionPool`
       - ``source_address``: Set the source address for the current connection.
-
-        .. note:: This is ignored for Python 2.6. It is only applied for 2.7 and 3.x
-
       - ``socket_options``: Set specific options on the underlying socket. If not specified, then
         defaults are loaded from ``HTTPConnection.default_socket_options`` which includes disabling
         Nagle's algorithm (sets TCP_NODELAY to 1) unless the connection is behind a proxy.
@@ -109,21 +105,13 @@ class HTTPConnection(_HTTPConnection, object):
         if six.PY3:  # Python 3
             kw.pop('strict', None)
 
-        # Pre-set source_address in case we have an older Python like 2.6.
+        # Pre-set source_address.
         self.source_address = kw.get('source_address')
-
-        if sys.version_info < (2, 7):  # Python 2.6
-            # _HTTPConnection on Python 2.6 will balk at this keyword arg, but
-            # not newer versions. We can still use it when creating a
-            # connection though, so we pop it *after* we have saved it as
-            # self.source_address.
-            kw.pop('source_address', None)
 
         #: The socket options provided by the user. If no options are
         #: provided, we use the default options.
         self.socket_options = kw.pop('socket_options', self.default_socket_options)
 
-        # Superclass also sets self.source_address in Python 2.7+.
         _HTTPConnection.__init__(self, *args, **kw)
 
     @property
@@ -171,7 +159,7 @@ class HTTPConnection(_HTTPConnection, object):
             conn = connection.create_connection(
                 (self._dns_host, self.port), self.timeout, **extra_kw)
 
-        except SocketTimeout as e:
+        except SocketTimeout:
             raise ConnectTimeoutError(
                 self, "Connection to %s timed out. (connect timeout=%s)" %
                 (self.host, self.timeout))
@@ -184,10 +172,7 @@ class HTTPConnection(_HTTPConnection, object):
 
     def _prepare_conn(self, conn):
         self.sock = conn
-        # the _tunnel_host attribute was added in python 2.6.3 (via
-        # http://hg.python.org/cpython/rev/0f57b30a152f) so pythons 2.6(0-2) do
-        # not have them.
-        if getattr(self, '_tunnel_host', None):
+        if self._tunnel_host:
             # TODO: Fix tunnel so it doesn't depend on self.sock state.
             self._tunnel()
             # Mark this connection as not reusable
@@ -218,13 +203,13 @@ class HTTPConnection(_HTTPConnection, object):
         self.endheaders()
 
         if body is not None:
-            stringish_types = six.string_types + (six.binary_type,)
+            stringish_types = six.string_types + (bytes,)
             if isinstance(body, stringish_types):
                 body = (body,)
             for chunk in body:
                 if not chunk:
                     continue
-                if not isinstance(chunk, six.binary_type):
+                if not isinstance(chunk, bytes):
                     chunk = chunk.encode('utf8')
                 len_str = hex(len(chunk))[2:]
                 self.send(len_str.encode('utf-8'))
@@ -318,12 +303,9 @@ class VerifiedHTTPSConnection(HTTPSConnection):
     def connect(self):
         # Add certificate verification
         conn = self._new_conn()
-
         hostname = self.host
-        if getattr(self, '_tunnel_host', None):
-            # _tunnel_host was added in Python 2.6.3
-            # (See: http://hg.python.org/cpython/rev/0f57b30a152f)
 
+        if self._tunnel_host:
             self.sock = conn
             # Calls self._set_hostport(), so self.host is
             # self._tunnel_host below.

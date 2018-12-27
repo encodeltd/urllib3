@@ -25,7 +25,7 @@ def setup_module():
 
 def teardown_module():
     try:
-        from urllib3.contrib.securetransport import extract_from_urllib3
+        from urllib3.contrib.pyopenssl import extract_from_urllib3
         extract_from_urllib3()
     except ImportError:
         pass
@@ -82,5 +82,5 @@ class TestPyOpenSSLHelpers(unittest.TestCase):
         self.assertEqual(get_subj_alt_name(cert), [])
 
         self.assertEqual(mock_warning.call_count, 1)
-        self.assertTrue(isinstance(mock_warning.call_args[0][1],
-                                   x509.DuplicateExtension))
+        self.assertIsInstance(mock_warning.call_args[0][1],
+                              x509.DuplicateExtension)

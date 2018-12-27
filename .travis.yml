@@ -2,7 +2,9 @@ language: python
 script:
   - ./_travis/run.sh
 before_install:
+  - env
   - openssl version
+  - python -c "import ssl; print(ssl.OPENSSL_VERSION)"
 after_success:
   - ./_travis/upload_coverage.sh
 cache:
@@ -23,8 +25,6 @@ env:
 # https://github.com/travis-ci/travis-ci/issues/4794
 matrix:
   include:
-    - python: 2.6
-      env: TOXENV=py26
     - python: 2.7
       env: TOXENV=py27
     - python: 3.4
@@ -33,13 +33,17 @@ matrix:
       env: TOXENV=py35
     - python: 3.6
       env: TOXENV=py36
-    - python: 3.7-dev
+    - python: 3.7
       env: TOXENV=py37
+      dist: xenial
+      sudo: required
+    - python: 3.8-dev
+      env: TOXENV=py38
+      dist: xenial
+      sudo: required
+
     - python: pypy-5.4
       env: TOXENV=pypy
-    - language: generic
-      os: osx
-      env: TOXENV=py26
     - language: generic
       os: osx
       env: TOXENV=py27

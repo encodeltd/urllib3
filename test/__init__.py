@@ -4,7 +4,8 @@ import errno
 import functools
 import logging
 import socket
-import platform
+import ssl
+import os
 
 import pytest
 
@@ -35,30 +36,6 @@ def clear_warnings(cls=HTTPWarning):
 def setUp():
     clear_warnings()
     warnings.simplefilter('ignore', HTTPWarning)
-
-
-def onlyPy26OrOlder(test):
-    """Skips this test unless you are on Python2.6.x or earlier."""
-
-    @functools.wraps(test)
-    def wrapper(*args, **kwargs):
-        msg = "{name} only runs on Python2.6.x or older".format(name=test.__name__)
-        if sys.version_info >= (2, 7):
-            pytest.skip(msg)
-        return test(*args, **kwargs)
-    return wrapper
-
-
-def onlyPy27OrNewer(test):
-    """Skips this test unless you are on Python 2.7.x or later."""
-
-    @functools.wraps(test)
-    def wrapper(*args, **kwargs):
-        msg = "{name} requires Python 2.7.x+ to run".format(name=test.__name__)
-        if sys.version_info < (2, 7):
-            pytest.skip(msg)
-        return test(*args, **kwargs)
-    return wrapper
 
 
 def onlyPy279OrNewer(test):
@@ -109,13 +86,14 @@ def notSecureTransport(test):
     return wrapper
 
 
-def onlyPy27OrNewerOrNonWindows(test):
-    """Skips this test unless you are on Python2.7+ or non-Windows"""
+def notOpenSSL098(test):
+    """Skips this test for Python 3.4 and 3.5 macOS python.org distributions"""
+
     @functools.wraps(test)
     def wrapper(*args, **kwargs):
-        msg = "{name} requires Python2.7+ or non-Windows to run".format(name=test.__name__)
-        if sys.version_info < (2, 7) and platform.system() == 'Windows':
-            pytest.skip(msg)
+        is_stdlib_ssl = not ssl_.IS_SECURETRANSPORT and not ssl_.IS_PYOPENSSL
+        if is_stdlib_ssl and ssl.OPENSSL_VERSION == "OpenSSL 0.9.8zh 14 Jan 2016":
+            pytest.xfail("{name} fails with OpenSSL 0.9.8zh".format(name=test.__name__))
         return test(*args, **kwargs)
     return wrapper
 
@@ -156,6 +134,21 @@ def requires_network(test):
             msg = "Can't run {name} because the network is unreachable".format(
                 name=test.__name__)
             pytest.skip(msg)
+    return wrapper
+
+
+def fails_on_travis_gce(test):
+    """Expect the test to fail on Google Compute Engine instances for Travis.
+    Travis uses GCE for its sudo: enabled builds.
+
+    Reason for this decorator:
+    https://github.com/urllib3/urllib3/pull/1475#issuecomment-440788064
+    """
+    @functools.wraps(test)
+    def wrapper(*args, **kwargs):
+        if os.environ.get("TRAVIS_INFRA") == "gce":
+            pytest.xfail("%s is expected to fail on Travis GCE builds" % test.__name__)
+        return test(*args, **kwargs)
     return wrapper
 
 
